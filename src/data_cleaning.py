@@ -1,9 +1,9 @@
 import pandas as pd
 
 
-DATA_PATH  = 'data/Music Info.csv'
+DATA_PATH  = 'data/Music.csv'
 
-CLEANED_DATA_PATH = 'data/cleaned_music_info.csv'
+CLEANED_DATA_PATH = 'data/cleaned_music.csv'
 
 def clean_data(data):
     """

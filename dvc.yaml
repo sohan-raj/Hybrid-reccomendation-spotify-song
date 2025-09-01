@@ -1,0 +1,38 @@
+stages:
+  data_cleaning:
+    cmd: python src/data_cleaning.py
+    deps:
+      - src/data_cleaning.py
+      - data/music.csv
+    outs:
+      - data/cleaned_music.csv
+
+  content_based_filtering:
+    cmd: python src/content_based_filtering.py
+    deps:
+      - src/content_based_filtering.py
+      - data/cleaned_music.csv
+      - src/data_cleaning.py
+    outs:
+      - data/transformed_music_data.npz
+      - models/column_transformer.joblib
+
+  # run_app:
+  #   cmd: streamlit run src/app.py
+  #   deps:
+  #     - src/app.py
+  #     - data/transformed_music_data.npz
+  #     - data/cleaned_music.csv
+  #     - src/content_based_filtering.py
+  #     - src/data_cleaning.py
+  #     - models/column_transformer.joblib
+  collaborative_filtering:
+    cmd: python src/collaborative_filtering.py
+    deps: 
+      - src/collaborative_filtering.py
+      - data/cleaned_music.csv
+      - data/User.csv
+    outs:
+      - data/collab_filtered_data.csv
+      - data/track_ids.npy
+      - data/interaction_matrix.npz
