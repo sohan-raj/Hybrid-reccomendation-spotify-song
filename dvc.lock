@@ -38,7 +38,7 @@ stages:
       size: 4522796
     - path: models/column_transformer.joblib
       hash: md5
-      md5: 5d0ade5d77a915a8c4d089501ea3f0f7
+      md5: ac1b54d5973b4025a00678aa0cb4d94f
       size: 135933
   collaborative_filtering:
     cmd: python src/collaborative_filtering.py
@@ -53,8 +53,8 @@ stages:
       size: 13658961
     - path: src/collaborative_filtering.py
       hash: md5
-      md5: 54b5c8e3d181550c9a412d7491a63693
-      size: 8385
+      md5: c4a7d841630f6ba37de13c68d21f6f09
+      size: 7602
     outs:
     - path: data/collab_filtered_data.csv
       hash: md5
@@ -77,7 +77,7 @@ stages:
       size: 8229469
     - path: models/column_transformer.joblib
       hash: md5
-      md5: 5d0ade5d77a915a8c4d089501ea3f0f7
+      md5: ac1b54d5973b4025a00678aa0cb4d94f
       size: 135933
     - path: src/transformed_filtered_data.py
       hash: md5
@@ -127,11 +127,11 @@ stages:
       hash: md5
       md5: 1f0e5855745925da1f450d3ad88cf79a
       size: 8229469
-    - path: data/interaction_matrix_hybrid.npz
+    - path: data/interaction_matrix.npz
       hash: md5
       md5: afe62e176c6d4a3ddd4f0fb87b53b6a0
       size: 32311115
-    - path: data/track_ids_hybrid.npy
+    - path: data/track_ids.npy
       hash: md5
       md5: 2b98965823457fdb6526d3c5df182d03
       size: 640016
@@ -141,5 +141,5 @@ stages:
       size: 2735850
     - path: src/hybrid_recommendation.py
       hash: md5
-      md5: d76e36156803a97d7241e2826f35e329
-      size: 8170
+      md5: fc7ac543628c7a1b741054a50a8e8923
+      size: 8156

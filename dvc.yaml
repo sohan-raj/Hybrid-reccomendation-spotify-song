@@ -35,23 +35,11 @@ stages:
     outs:
       - data/transformed_hybrid_data.npz
 
-  # data_alignment:
-  #   cmd: python src/data_alignment.py
-  #   deps:
-  #     - src/data_alignment.py
-  #     - data/transformed_hybrid_data.npz
-  #     - data/track_ids.npy
-  #     - data/interaction_matrix.npz
-  #     - data/collab_filtered_data.csv
-  #   outs:
-  #     - data/track_ids_hybrid.npy
-  #     - data/interaction_matrix_hybrid.npz
-
   hybrid_recommendation:
     cmd: python src/hybrid_recommendation.py
     deps:
       - src/hybrid_recommendation.py
       - data/transformed_hybrid_data.npz
-      - data/track_ids_hybrid.npy
-      - data/interaction_matrix_hybrid.npz
+      - data/track_ids.npy
+      - data/interaction_matrix.npz
       - data/collab_filtered_data.csv

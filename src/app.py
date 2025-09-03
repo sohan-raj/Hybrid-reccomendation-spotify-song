@@ -57,19 +57,65 @@ def load_interaction_matrix(path=INTERACTION_MATRIX_PATH):
 
 st.set_page_config(page_title="Music Recommendation", layout="wide")
 st.title("Music Recommendation System 🎧")
+st.header("Input")
 
-# Sidebar inputs
-st.sidebar.header("Input")
-song_name = st.sidebar.text_input("Song Name", "Hips Don't Lie")
-artist_name = st.sidebar.text_input("Artist Name", "Shakira")
-number_of_recommendations = st.sidebar.slider("Number of Recommendations", 1, 20, 10)
-recommendation_type = st.sidebar.selectbox("Recommendation Type", ("Hybrid", "Collaborative", "Content-Based"))
+song_df = load_song_data(CLEANED_DATA_PATH)
+
+# Song selection with dropdown suggestions
+if song_df is not None:
+    all_songs = song_df['name'].dropna().unique().tolist()
+else:
+    all_songs = []
+
+# Autocomplete dropdown
+selected_song_from_search = st.selectbox(
+    "Search Song (autocomplete)", 
+    options=all_songs, 
+    index=all_songs.index("Hips Don't Lie") if "Hips Don't Lie" in all_songs else 0
+)
+
+# Artist auto-fill when song is selected
+if selected_song_from_search:
+    matching_artist = song_df[song_df['name'] == selected_song_from_search]['artist'].values[0]
+else:
+    selected_artist_from_search = None
+
+
+
+
+artist_name = st.text_input("Artist Name", matching_artist)
+number_of_recommendations = st.slider("Number of Recommendations", 1, 20, 10)
+recommendation_type = st.selectbox("Recommendation Type", ("Hybrid", "Collaborative", "Content-Based"))
+
+# Load song dataframe for search/autocomplete
+song_df = load_song_data(CLEANED_DATA_PATH)
+
 
 st.subheader("Selected Parameters")
-st.write(f"**Song:** {song_name}")
-st.write(f"**Artist:** {artist_name}")
+# prefer search-selected values when available
+effective_song = selected_song_from_search 
+effective_artist = artist_name
+st.write(f"**Song:** {effective_song}")
+st.write(f"**Artist:** {effective_artist}")
 st.write(f"**Count:** {number_of_recommendations}")
 st.write(f"**Type:** {recommendation_type}")
+
+# Load datasets
+song_df = load_song_data(CLEANED_DATA_PATH)
+collab_df = load_song_data(FILTERED_DATA_PATH)
+
+def check_song_availability(song_name, artist_name=None):
+    in_content = False
+    in_collab = False
+
+    if song_df is not None:
+        in_content = any(song_df['name'].str.lower() == song_name.lower())
+
+    if collab_df is not None:
+        in_collab = any(collab_df['name'].str.lower() == song_name.lower())
+
+    return in_content, in_collab
+
 
 
 def get_recommendations(song, artist, k, rec_type):
@@ -138,9 +184,23 @@ def get_recommendations(song, artist, k, rec_type):
 
 
 if st.button("Get Recommendation"):
-    with st.spinner("Computing recommendations..."):
-        results = get_recommendations(song_name.strip(), artist_name.strip(), number_of_recommendations, recommendation_type)
+    with st.spinner("Checking song availability..."):
+        in_content, in_collab = check_song_availability(effective_song, effective_artist)
 
+        # If the song is missing in collab/hybrid data
+        if in_content and not in_collab:
+            st.warning(f"⚠️ '{effective_song}' is not available in Collaborative/Hybrid dataset. "
+                       f"Showing only Content-Based recommendations.")
+            results = get_recommendations(effective_song,
+                                          effective_artist,
+                                          number_of_recommendations,
+                                          "Content-Based")
+        else:
+            # Normal flow
+            results = get_recommendations(effective_song,
+                                          effective_artist,
+                                          number_of_recommendations,
+                                          recommendation_type)
     if results is None or results.empty:
         st.info("No recommendations found.")
     else:
