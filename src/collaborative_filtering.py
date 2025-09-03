@@ -89,52 +89,7 @@ def create_interaction_matrix(
     )
 
     save_sparse_matrix(interaction_matrix_sparse, interaction_matrix_save_path)
-
-# def create_interaction_matrix(data: dd.DataFrame, track_id_save_path: str,interaction_matrix_save_path: str) -> pd.DataFrame:
-#     """
-#     Create and save a user-item interaction matrix from user listening data.
-
-#     Args:
-#         data (dd.DataFrame): Dask DataFrame containing user interaction data.
-#         track_id_save_path (str): Path to save the track IDs as .npy file.
-#         interaction_matrix_save_path (str): Path to save the interaction matrix as .npz file.
-
-#     Returns:
-#         None
-#     """
-#     # Copy and preprocess the data
-#     df = data.copy()
-#     df['playcount'] = df['playcount'].astype(np.float64)
-
-#     # Categorize user_id and track_id for efficient encoding
-#     df = df.categorize(columns=['user_id', 'track_id'])
-
-#     # Create mappings for user and track IDs
-#     user_mapping = df['user_id'].cat.codes
-#     track_mapping = df['track_id'].cat.codes
-
-#     # Get unique track IDs and save them
-#     track_ids = df['track_id'].cat.categories.values
-#     np.save(track_id_save_path, track_ids, allow_pickle=True)
-
-#     # Assign encoded user and track IDs
-#     df = df.assign(user_id = user_mapping, track_id = track_mapping)
-
-#     # Group by user and track, summing playcounts
-#     interaction_matrix = df.groupby(['user_id', 'track_id'])['playcount'].sum().reset_index()
-#     interaction_matrix = interaction_matrix.compute()
-
-#     # Prepare indices and data for sparse matrix
-#     row_indices = interaction_matrix['track_id']
-#     col_indices = interaction_matrix['user_id']
-#     data_values = interaction_matrix['playcount']
-
-#     n_tracks = row_indices.nunique()
-#     n_users = col_indices.nunique()
-
-#     # Create and save the sparse interaction matrix
-#     interaction_matrix_sparse = csr_matrix((data_values, (row_indices, col_indices)), shape=(n_tracks, n_users))
-#     save_sparse_matrix(interaction_matrix_sparse, interaction_matrix_save_path)
+    return interaction_matrix_sparse
 
 def collaborative_recommendations(song_name: str, artist_name: str, song_df: pd.DataFrame, track_ids: np.ndarray, interaction_matrix: csr_matrix, k: int = 10) -> pd.DataFrame:
     """
@@ -161,8 +116,21 @@ def collaborative_recommendations(song_name: str, artist_name: str, song_df: pd.
         print(f"Song '{song_name}' by '{artist_name}' not found in the dataset.")
     
     # Get the track ID and its index
+    if song_row.empty:
+        # song not found -- return empty dataframe with expected columns
+        return pd.DataFrame(columns=['name', 'artist', 'spotify_preview_url'])
+
     input_track_id = song_row['track_id'].values.item()
-    input_index = np.where(track_ids == input_track_id)[0][0]
+
+    # Ensure track_ids is an array (handles 0-d numpy scalars or lists)
+    track_ids_arr = np.atleast_1d(np.array(track_ids))
+    matches = np.flatnonzero(track_ids_arr == input_track_id)
+    if matches.size == 0:
+        # track id not present in provided track_ids mapping
+        print(f"Track id '{input_track_id}' not found in track_ids mapping.")
+        return pd.DataFrame(columns=['name', 'artist', 'spotify_preview_url'])
+
+    input_index = int(matches[0])
 
     # Get the interaction vector for the song (may be sparse or 1D)
     input_row = interaction_matrix[input_index]
@@ -181,8 +149,10 @@ def collaborative_recommendations(song_name: str, artist_name: str, song_df: pd.
     # remove the input index if present
     top_indices = [idx for idx in top_indices if idx != input_index]
     recommendation_indices = np.array(top_indices)[:k]
+    # Ensure track_ids is a numpy array for advanced indexing (handles lists)
+    track_ids_arr = np.atleast_1d(np.array(track_ids))
     # Get track IDs for recommendations
-    recommendation_track_ids = track_ids[recommendation_indices]
+    recommendation_track_ids = track_ids_arr[np.asarray(recommendation_indices, dtype=int)]
     # Filter song DataFrame for recommended songs
     filtered_songs = song_df[song_df['track_id'].isin(recommendation_track_ids)]
 
@@ -198,16 +168,21 @@ def main():
     """
     # Load user listening data
     user_data = dd.read_csv(user_data_path)
+    song_data = pd.read_csv(song_data_path)
+    df = user_data[user_data["track_id"].isin(song_data["track_id"].unique())]
 
+    # Convert to Pandas for categorical operations
+    df = df.compute()
     # Get unique track IDs from user data
     unique_track_ids = user_data['track_id'].unique().compute().tolist()
-    # Load song metadata
-    song_data = pd.read_csv(song_data_path)
+
     # Filter songs to those present in user data
-    filtered_song_data = pd.read_csv(filtered_data_save_path)
-    track_ids = np.load(track_id_save_path, allow_pickle=True)
-    interaction_matrix = load_npz(interaction_matrix_save_path)
-    recommendations = collaborative_recommendations("hips don't lie", 'shakira', filtered_song_data, track_ids, interaction_matrix, k=6)
+    filtered_song_data = filter_songs_data(song_data,   unique_track_ids, filtered_data_save_path)
+    # Create and save interaction matrix
+    interaction_matrix_sparse = create_interaction_matrix(user_data, filtered_song_data, track_id_save_path, interaction_matrix_save_path)
+
+
+    recommendations = collaborative_recommendations("hips don't lie", 'shakira', filtered_song_data, unique_track_ids, interaction_matrix_sparse, k=6)
     print(recommendations)
 
 if __name__ == "__main__":
