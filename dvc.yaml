@@ -16,16 +16,6 @@ stages:
     outs:
       - data/transformed_music_data.npz
       - models/column_transformer.joblib
-
-  # run_app:
-  #   cmd: streamlit run src/app.py
-  #   deps:
-  #     - src/app.py
-  #     - data/transformed_music_data.npz
-  #     - data/cleaned_music.csv
-  #     - src/content_based_filtering.py
-  #     - src/data_cleaning.py
-  #     - models/column_transformer.joblib
   collaborative_filtering:
     cmd: python src/collaborative_filtering.py
     deps: 
@@ -36,3 +26,32 @@ stages:
       - data/collab_filtered_data.csv
       - data/track_ids.npy
       - data/interaction_matrix.npz
+  transformed_filtered_data:
+    cmd: python src/transformed_filtered_data.py
+    deps:
+      - src/transformed_filtered_data.py
+      - data/collab_filtered_data.csv
+      - models/column_transformer.joblib
+    outs:
+      - data/transformed_hybrid_data.npz
+
+  # data_alignment:
+  #   cmd: python src/data_alignment.py
+  #   deps:
+  #     - src/data_alignment.py
+  #     - data/transformed_hybrid_data.npz
+  #     - data/track_ids.npy
+  #     - data/interaction_matrix.npz
+  #     - data/collab_filtered_data.csv
+  #   outs:
+  #     - data/track_ids_hybrid.npy
+  #     - data/interaction_matrix_hybrid.npz
+
+  hybrid_recommendation:
+    cmd: python src/hybrid_recommendation.py
+    deps:
+      - src/hybrid_recommendation.py
+      - data/transformed_hybrid_data.npz
+      - data/track_ids_hybrid.npy
+      - data/interaction_matrix_hybrid.npz
+      - data/collab_filtered_data.csv
